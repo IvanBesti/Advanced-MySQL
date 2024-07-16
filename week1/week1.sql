@@ -44,3 +44,57 @@ CALL GetDiscount(5, @newCost);
 
 -- Select the new cost to see the result
 SELECT @newCost;
+
+-- TASK 3 CREATE TRIGGER
+DELIMITER //
+CREATE TRIGGER OrderQtyCheck
+BEFORE INSERT
+ON Orders FOR EACH ROW
+BEGIN
+    IF NEW.Quantity < 0 THEN
+    SET NEW.Quantity = 0;
+    END IF;
+END //
+DELIMITER ;
+
+
+CREATE TRIGGER LogNewOrderInsert
+AFTER INSERT
+ON Orders FOR EACH ROW
+INSERT INTO Audits VALUES ('AFTER', 'A new order was inserted', 'INSERT');
+
+CREATE TRIGGER AfterDeleteOrder
+AFTER DELETE
+ON Orders FOR EACH ROW
+INSERT INTO Audits
+VALUES('AFTER', CONCAT('Order', OLD.OrderID, 'was deleted at', CURRENT_TIME(), 
+'on', CURRENT_DATE()), 'DELETE');
+
+-- TASK 4 CREATE SCHEDULED EVENTS
+DELIMITER //
+CREATE EVENT GenerateRevenueReport
+ON SCHEDULE AT CURRENT_TIMESTAMP + INTERVAL 12 HOUR
+DO
+BEGIN
+    INSERT INTO ReportData (OrderID, ClientID, ProductID, Quantity, Cost, Date)
+    SELECT *
+    FROM Orders 
+    WHERE Date
+    BETWEEN '2022-08-01' AND '2022-08-31';
+END //
+DELIMITER ;
+
+DELIMITER //
+CREATE EVENT DailyRestock
+ON SCHEDULE
+EVERY 1 DAY
+DO 
+BEGIN 
+    IF Products.NumberOfItems < 50 THEN
+    UPDATE Products SET NumberOfItems = 50;
+    END IF;
+END //
+DELIMITER ;
+
+-- DELETE DROP EVENT 
+DROP EVENT [IF EXISTS] event_name;
