@@ -46,6 +46,7 @@ CALL GetDiscount(5, @newCost);
 SELECT @newCost;
 
 -- TASK 3 CREATE TRIGGER
+-- #1
 DELIMITER //
 CREATE TRIGGER OrderQtyCheck
 BEFORE INSERT
@@ -57,18 +58,70 @@ BEGIN
 END //
 DELIMITER ;
 
-
+-- #2
 CREATE TRIGGER LogNewOrderInsert
 AFTER INSERT
 ON Orders FOR EACH ROW
 INSERT INTO Audits VALUES ('AFTER', 'A new order was inserted', 'INSERT');
 
+-- #3
 CREATE TRIGGER AfterDeleteOrder
 AFTER DELETE
 ON Orders FOR EACH ROW
 INSERT INTO Audits
 VALUES('AFTER', CONCAT('Order', OLD.OrderID, 'was deleted at', CURRENT_TIME(), 
 'on', CURRENT_DATE()), 'DELETE');
+
+-- #4
+DELIMITER //
+
+CREATE TRIGGER ProductSellPriceInsertCheck
+AFTER INSERT
+ON products
+FOR EACH ROW
+BEGIN
+    IF NEW.SellPrice <= NEW.BuyPrice THEN
+        INSERT INTO notifications (Notification, DateTime)
+        VALUES (CONCAT("A SellPrice same or less than the BuyPrice was inserted for ProductID ", NEW.ProductID), NOW());
+    END IF;
+END //
+
+DELIMITER ;
+
+
+-- #5
+DELIMITER //
+
+CREATE TRIGGER ProductSellPriceUpdateCheck
+AFTER UPDATE
+ON products
+FOR EACH ROW
+BEGIN
+    IF NEW.SellPrice <= NEW.BuyPrice THEN
+        INSERT INTO notifications (Notification, DateTime)
+        VALUES (CONCAT(NEW.ProductID, " was updated with a SellPrice of ", NEW.SellPrice, " which is the same or less than the BuyPrice"), NOW());
+    END IF;
+END //
+
+DELIMITER ;
+
+-- #6
+DELIMITER //
+
+CREATE TRIGGER NotifyProductDelete
+AFTER DELETE
+ON products
+FOR EACH ROW
+BEGIN
+    INSERT INTO notifications (Notification, DateTime)
+    VALUES (CONCAT("The product with a ProductID ", OLD.ProductID, " was deleted"), NOW());
+END //
+
+DELIMITER ;
+
+
+
+
 
 -- TASK 4 CREATE SCHEDULED EVENTS
 DELIMITER //
